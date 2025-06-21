@@ -17,6 +17,27 @@ A CLI tool to automate GitHub PR creation/updates using LLMs (like OpenAI) to ge
 brew install tenfyzhong/tap/aipr
 ```
 
+## Setup
+
+### GitHub Authentication
+1. Authenticate with GitHub:
+   ```sh
+   gh auth login
+   ```
+2. Follow the prompts to complete authentication
+
+### LLM Setup
+1. Configure your OpenAI API key:
+   ```sh
+   llm keys set openai
+   ```
+   (Enter your OpenAI API key when prompted)
+2. Alternatively, you can use other supported LLM providers by following their setup instructions
+
+For more details, see:
+- GitHub CLI docs: https://cli.github.com/manual/
+- LLM docs: https://llm.datasette.io/
+
 ## Usage
 
 ```sh
