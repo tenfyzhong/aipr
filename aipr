@@ -266,6 +266,7 @@ EOF
 
 create_pr() {
     DIFF="$1"
+    shift
     echo -e "${YELLOW}There is no ongoing PR for branch $BASE_REMOTE/$BASE_BRANCH<-$HEAD_REMOTE/$HEAD_BRANCH; will create one ${NC}"
 
     TEMP_FILE=$(mktemp)
@@ -297,6 +298,7 @@ EOF
 
 update_pr() {
     DIFF=$1
+    shift
     echo -e "${YELLOW}There is an ongoing PR for branch $BASE_REMOTE/$BASE_BRANCH<-$HEAD_REMOTE/$HEAD_BRANCH; will update it ${NC}"
 
     SYSTEM=$(cat "$PROMPT_BODY")
@@ -466,7 +468,7 @@ if [ -z "$TEMPLATE" ]; then
 fi
 
 if [ -z "$ONGOING" ]; then
-    create_pr "$DIFF"
+    create_pr "$DIFF" "$@"
 else
-    update_pr "$DIFF"
+    update_pr "$DIFF" "$@"
 fi
