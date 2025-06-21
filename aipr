@@ -336,11 +336,11 @@ EOF
 
 DEFAULT_PROMPT_TITLE=~/.config/prompts/pr-title-prompt.txt
 if [ ! -f "$DEFAULT_PROMPT_TITLE" ]; then
-    DEFAULT_PROMPT_TITLE=$(brew --prefix)/share/llm-pr/prompts/pr-title-prompt.txt
+    DEFAULT_PROMPT_TITLE=$(brew --prefix)/share/aipr/prompts/pr-title-prompt.txt
 fi
 DEFAULT_PROMPT_BODY=~/.config/prompts/pr-body-prompt.txt
 if [ ! -f "$DEFAULT_PROMPT_BODY" ]; then
-    DEFAULT_PROMPT_BODY=$(brew --prefix)/share/llm-pr/prompts/pr-body-prompt.txt
+    DEFAULT_PROMPT_BODY=$(brew --prefix)/share/aipr/prompts/pr-body-prompt.txt
 fi
 
 BASE_REMOTE=origin
