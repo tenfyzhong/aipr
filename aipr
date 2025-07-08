@@ -8,7 +8,6 @@ YELLOW='\033[0;33m' # Sets text to yellow
 BLUE='\033[0;34m'   # Sets text to blue
 NC='\033[0m'        # Resets the text color to default, no color
 
-
 # Function to display a spinning animation during the LLM processing
 spin_animation() {
     local msg="$1"
@@ -23,11 +22,11 @@ spin_animation() {
     # Infinite loop to keep the animation running
     while true; do
         for i in "${spinner[@]}"; do
-            tput civis  # Hide the cursor to enhance the animation appearance
-            tput el1    # Clear the line from the cursor to the beginning to display the spinner
+            tput civis                                    # Hide the cursor to enhance the animation appearance
+            tput el1                                      # Clear the line from the cursor to the beginning to display the spinner
             printf "\r${YELLOW}%s${NC} %s..." "$i" "$msg" # Print the spinner and message
-            sleep 0.1   # Delay to control the speed of the animation
-            tput cub $(( ${#msg} + 5 )) # Move the cursor back to reset the spinner position
+            sleep 0.1                                     # Delay to control the speed of the animation
+            tput cub $((${#msg} + 5))                     # Move the cursor back to reset the spinner position
         done
     done
 }
@@ -35,7 +34,7 @@ spin_animation() {
 kill_spin() {
     if [ -n "$SPIN_PID" ]; then
         kill $SPIN_PID
-        wait $SPIN_PID 2>/dev/null  # Wait for the process to terminate and suppress error messages
+        wait $SPIN_PID 2>/dev/null # Wait for the process to terminate and suppress error messages
         SPIN_PID=
         printf "\n"
     fi
@@ -83,13 +82,13 @@ select_remote() {
 
     echo "Available remotes:"
     for i in "${!remotes[@]}"; do
-        printf "%d) %s\n" $((i+1)) "${remotes[$i]}"
+        printf "%d) %s\n" $((i + 1)) "${remotes[$i]}"
     done
 
     while true; do
         read -p "Select remote (1-$remote_count): " choice
         if [[ $choice =~ ^[0-9]+$ ]] && [[ $choice -ge 1 ]] && [[ $choice -le $remote_count ]]; then
-            echo "${remotes[$((choice-1))]}"
+            echo "${remotes[$((choice - 1))]}"
             return 0
         fi
         echo "Invalid selection" >&2
@@ -104,7 +103,7 @@ check_unpush() {
         return 1
     fi
     if ! git rev-parse --verify "$remote/$branch" >/dev/null 2>&1; then
-        return 1  # Remote branch doesn't exist yet, so nothing to push
+        return 1 # Remote branch doesn't exist yet, so nothing to push
     fi
 
     local unpush=$(git log "$remote/$branch"..HEAD --oneline)
@@ -122,7 +121,7 @@ prompt_push() {
     read -p "Do you want to push to '$remote/$branch'? [y/N] " choice
 
     case "$choice" in
-        y|Y)
+        y | Y)
             echo "Pushing to $remote/$branch..."
             if git push "$remote" "$branch"; then
                 echo -e "${GREEN}Successfully pushed to $remote/$branch${NC}"
@@ -176,13 +175,13 @@ find_template() {
         *)
             echo "Multiple PR templates found:" >&2
             for i in "${!templates[@]}"; do
-                printf "%d) %s\n" $((i+1)) "${templates[$i]}" >&2
+                printf "%d) %s\n" $((i + 1)) "${templates[$i]}" >&2
             done
 
             while true; do
                 read -p "Select template (1-${#templates[@]}): " choice
                 if [[ $choice =~ ^[0-9]+$ ]] && [[ $choice -ge 1 ]] && [[ $choice -le ${#templates[@]} ]]; then
-                    echo "${templates[$((choice-1))]}"
+                    echo "${templates[$((choice - 1))]}"
                     return 0
                 fi
                 echo "Invalid selection" >&2
@@ -238,7 +237,7 @@ generate_title() {
     TITLE=$(echo "$DIFF" | llm -s "$(cat "$PROMPT_TITLE")")
     kill_spin
 
-    echo "$TITLE" > "$TEMP_FILE"
+    echo "$TITLE" >"$TEMP_FILE"
     ${EDITOR:vi} "$TEMP_FILE"
 }
 
@@ -249,12 +248,13 @@ generate_body() {
 
     SYSTEM=$(cat "$PROMPT_BODY")
     if [ -n "$EXTRA_SYSTEM" ]; then
-        PROMPT=$(cat <<EOF
+        PROMPT=$(
+            cat <<EOF
 $SYSTEM
 
 $EXTRA_SYSTEM
 EOF
-)
+        )
     else
         PROMPT="$SYSTEM"
     fi
@@ -265,14 +265,14 @@ EOF
     kill_spin
 
     # TEMP_FILE=$(mktemp).md
-    echo "$BODY" > "$TEMP_FILE"
+    echo "$BODY" >"$TEMP_FILE"
     ${EDITOR:-vi} "$TEMP_FILE"
 }
 
 create_pr() {
     DIFF="$1"
     shift
-    echo -e "${YELLOW}There is no ongoing PR for branch $BASE_REMOTE/$BASE_BRANCH<-$HEAD_REMOTE/$HEAD_BRANCH; will create one ${NC}"
+    echo -e "${YELLOW}There is no ongoing PR for branch ${BLUE}${HEAD_REMOTE}/${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_REMOTE}/${BASE_BRANCH}${YELLOW}. We will create one ${NC}"
 
     TEMP_FILE=$(mktemp)
     generate_title "$DIFF" "$TEMP_FILE"
@@ -282,11 +282,12 @@ create_pr() {
     EXTRA_SYSTEM=
     if [ -n "$TEMPLATE" ]; then
         TEMPLATE_CONTENT=$(cat "$TEMPLATE")
-        EXTRA_SYSTEM=$(cat <<EOF
+        EXTRA_SYSTEM=$(
+            cat <<EOF
 You should fill in the content based on the following template:
 $TEMPLATE_CONTENT
 EOF
-)
+        )
     fi
 
     TEMP_FILE=$(mktemp).md
@@ -304,7 +305,7 @@ EOF
 update_pr() {
     DIFF=$1
     shift
-    echo -e "${YELLOW}There is an ongoing PR for branch $BASE_REMOTE/$BASE_BRANCH<-$HEAD_REMOTE/$HEAD_BRANCH; will update it ${NC}"
+    echo -e "${YELLOW}There is an ongoing PR for branch ${BLUE}${HEAD_REMOTE}/${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_REMOTE}/${BASE_BRANCH}${YELLOW}. We will update it ${NC}"
 
     SYSTEM=$(cat "$PROMPT_BODY")
 
@@ -318,14 +319,14 @@ update_pr() {
         extra_options+=(-t "$TITLE")
     fi
 
-
     OLD_BODY=$(gh pr view "$ONGOING" --json body --jq '.body')
 
-    EXTRA_SYSTEM=$(cat <<EOF
+    EXTRA_SYSTEM=$(
+        cat <<EOF
 There are some old content, you should update the old content, you should follow the old content format:
 $OLD_BODY
 EOF
-)
+    )
 
     TEMP_FILE=$(mktemp).md
     generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
@@ -361,25 +362,25 @@ UPDATE_TITLE=
 # GH_ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help)
+        -h | --help)
             show_help
             exit
             ;;
-        -r|--remote)
+        -r | --remote)
             # There remote repo to merge into
             BASE_REMOTE="$2"
             shift 2
             ;;
-        -B|--base)
+        -B | --base)
             # There remote branch to merge into
             BASE_BRANCH="$2"
             shift 2
             ;;
-        -H|--head)
+        -H | --head)
             HEAD_BRANCH="$2"
             shift 2
             ;;
-        -T|--template)
+        -T | --template)
             TEMPLATE="$2"
             shift 2
             ;;
@@ -453,10 +454,10 @@ fi
 BASE_URL=$(remote_2_url "$BASE_REMOTE")
 BASE_VIEW=$(gh repo view --json defaultBranchRef,nameWithOwner "$BASE_URL")
 
-BASE_REPO=$(echo "$BASE_VIEW" | jq '.nameWithOwner' | tr -d '"')
+BASE_REPO=$(echo "$BASE_VIEW" | jq -r '.nameWithOwner')
 
 if [ -z "$BASE_BRANCH" ]; then
-    BASE_BRANCH=$(echo "$BASE_VIEW" | jq '.defaultBranchRef.name' | tr -d '"')
+    BASE_BRANCH=$(echo "$BASE_VIEW" | jq -r '.defaultBranchRef.name')
 fi
 
 # Get the changes between $HEAD_REMOTE/$HEAD_BRANCH and $BASE_REMOTE/$BASE_BRANCH
