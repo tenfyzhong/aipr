@@ -272,7 +272,7 @@ EOF
 create_pr() {
     DIFF="$1"
     shift
-    echo -e "${YELLOW}There is no ongoing PR for branch ${BLUE}${HEAD_REMOTE}/${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_REMOTE}/${BASE_BRANCH}${YELLOW}. We will create one ${NC}"
+    echo -e "${YELLOW}Creating PR ${BLUE}${GH_USER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     TEMP_FILE=$(mktemp)
     generate_title "$DIFF" "$TEMP_FILE"
@@ -295,7 +295,7 @@ EOF
 
     read -p "Create PR with these details? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
-        gh pr create -R "$BASE_REPO" -B "$BASE_BRANCH" -H "$HEAD_BRANCH" -t "$TITLE" -F "$TEMP_FILE" "$@"
+        gh pr create -R "$BASE_REPO" -H "${GH_USER}:${HEAD_BRANCH}" -B "${BASE_BRANCH}" -t "$TITLE" -F "$TEMP_FILE" "$@"
     else
         echo "PR creation cancelled"
     fi
@@ -305,7 +305,7 @@ EOF
 update_pr() {
     DIFF=$1
     shift
-    echo -e "${YELLOW}There is an ongoing PR for branch ${BLUE}${HEAD_REMOTE}/${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_REMOTE}/${BASE_BRANCH}${YELLOW}. We will update it ${NC}"
+    echo -e "${YELLOW}Updating PR ${BLUE}${GH_USER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     SYSTEM=$(cat "$PROMPT_BODY")
 
@@ -446,15 +446,24 @@ git fetch "$BASE_REMOTE"
 kill_spin
 
 HEAD_REMOTE=$(get_branch_remote "$HEAD_BRANCH")
+GH_USER=$(gh config get -h github.com user)
+
+if [ -z "$GH_USER" ]; then
+    echo "gh is unauthenticated" >&2
+    exit 1
+fi
 
 if ! check_unpush "$HEAD_BRANCH" "$HEAD_REMOTE"; then
     prompt_push "$HEAD_BRANCH" "$HEAD_REMOTE"
 fi
 
 BASE_URL=$(remote_2_url "$BASE_REMOTE")
-BASE_VIEW=$(gh repo view --json defaultBranchRef,nameWithOwner "$BASE_URL")
+BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL")
 
-BASE_REPO=$(echo "$BASE_VIEW" | jq -r '.nameWithOwner')
+BASE_OWNER=$(echo "$BASE_VIEW" | jq -r '.owner.login')
+BASE_NAME=$(echo "$BASE_VIEW" | jq -r '.name')
+
+BASE_REPO="$BASE_OWNER/$BASE_NAME"
 
 if [ -z "$BASE_BRANCH" ]; then
     BASE_BRANCH=$(echo "$BASE_VIEW" | jq -r '.defaultBranchRef.name')
