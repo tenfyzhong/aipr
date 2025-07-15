@@ -196,8 +196,8 @@ show_help() {
     echo ""
     echo "FLAGS:"
     echo "  -r, --remote <name>       The remote repository to use (default: origin)"
-    echo "  -B, --base <branch>       The base branch to compare against"
-    echo "  -H, --head <branch>       The head branch to compare from (default: current branch)"
+    echo "  -B, --base <branch>       The branch into which you want your code merged"
+    echo "  -H, --head <branch>       The branch that contains commits for your pull request (default [current branch])"
     echo "  -T, --template <file>     Specify a PR template file to use"
     echo "  --prompt-title <file>     Path to PR title prompt template (default: $DEFAULT_PROMPT_TITLE)"
     echo "  --prompt-body <file>      Path to PR body prompt template (default: $DEFAULT_PROMPT_BODY)"
@@ -295,7 +295,7 @@ EOF
 
     read -p "Create PR with these details? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
-        gh pr create -R "$BASE_REPO" -t "$TITLE" -F "$TEMP_FILE" "$@"
+        gh pr create -R "$BASE_REPO" -B "$BASE_BRANCH" -H "$HEAD_BRANCH" -t "$TITLE" -F "$TEMP_FILE" "$@"
     else
         echo "PR creation cancelled"
     fi
