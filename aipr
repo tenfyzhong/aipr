@@ -458,11 +458,6 @@ if [ -z "$HEAD_OWNER" ] || [ "$HEAD_OWNER" = "null" ]; then
     exit 1
 fi
 
-if [ -z "$HEAD_OWNER" ]; then
-    echo "The owner of $HEAD_URL is not found" >&2
-    exit 1
-fi
-
 if ! check_unpush "$HEAD_BRANCH" "$HEAD_REMOTE"; then
     prompt_push "$HEAD_BRANCH" "$HEAD_REMOTE"
 fi
