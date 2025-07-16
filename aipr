@@ -272,7 +272,7 @@ EOF
 create_pr() {
     DIFF="$1"
     shift
-    echo -e "${YELLOW}Creating PR ${BLUE}${GH_USER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
+    echo -e "${YELLOW}Creating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     TEMP_FILE=$(mktemp)
     generate_title "$DIFF" "$TEMP_FILE"
@@ -295,7 +295,7 @@ EOF
 
     read -p "Create PR with these details? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
-        gh pr create -R "$BASE_REPO" -H "${GH_USER}:${HEAD_BRANCH}" -B "${BASE_BRANCH}" -t "$TITLE" -F "$TEMP_FILE" "$@"
+        gh pr create -R "$BASE_REPO" -H "${HEAD_OWNER}:${HEAD_BRANCH}" -B "${BASE_BRANCH}" -t "$TITLE" -F "$TEMP_FILE" "$@"
     else
         echo "PR creation cancelled"
     fi
@@ -305,7 +305,7 @@ EOF
 update_pr() {
     DIFF=$1
     shift
-    echo -e "${YELLOW}Updating PR ${BLUE}${GH_USER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
+    echo -e "${YELLOW}Updating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     SYSTEM=$(cat "$PROMPT_BODY")
 
@@ -446,10 +446,12 @@ git fetch "$BASE_REMOTE"
 kill_spin
 
 HEAD_REMOTE=$(get_branch_remote "$HEAD_BRANCH")
-GH_USER=$(gh config get -h github.com user)
+HEAD_URL=$(remote_2_url "$HEAD_REMOTE")
+HEAD_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$HEAD_URL")
+HEAD_OWNER=$(echo "$HEAD_VIEW" | jq -r '.owner.login')
 
-if [ -z "$GH_USER" ]; then
-    echo "gh is unauthenticated" >&2
+if [ -z "$HEAD_OWNER" ]; then
+    echo "The owner of $HEAD_URL is not found" >&2
     exit 1
 fi
 
@@ -457,8 +459,12 @@ if ! check_unpush "$HEAD_BRANCH" "$HEAD_REMOTE"; then
     prompt_push "$HEAD_BRANCH" "$HEAD_REMOTE"
 fi
 
-BASE_URL=$(remote_2_url "$BASE_REMOTE")
-BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL")
+if [ "$HEAD_REMOTE" = "$BASE_REMOTE" ]; then
+    BASE_VIEW=$HEAD_VIEW
+else
+    BASE_URL=$(remote_2_url "$BASE_REMOTE")
+    BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL")
+fi
 
 BASE_OWNER=$(echo "$BASE_VIEW" | jq -r '.owner.login')
 BASE_NAME=$(echo "$BASE_VIEW" | jq -r '.name')
@@ -470,7 +476,7 @@ if [ -z "$BASE_BRANCH" ]; then
 fi
 
 # Get the changes between $HEAD_REMOTE/$HEAD_BRANCH and $BASE_REMOTE/$BASE_BRANCH
-DIFF=$(git diff "remotes/$BASE_REMOTE/$BASE_BRANCH"..."remotes/$HEAD_REMOTE/$HEAD_BRANCH")
+DIFF=$(git diff "remotes/$BASE_REMOTE/$BASE_BRANCH...remotes/$HEAD_REMOTE/$HEAD_BRANCH")
 
 if [ -z "$DIFF" ]; then
     exit 0
