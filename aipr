@@ -473,7 +473,15 @@ else
 fi
 
 BASE_OWNER=$(echo "$BASE_VIEW" | jq -r '.owner.login')
+if [ -z "$BASE_OWNER" ] || [ "$BASE_OWNER" = "null" ]; then
+    echo "Error: Could not determine owner from repo info for $BASE_URL" >&2
+    exit 1
+fi
 BASE_NAME=$(echo "$BASE_VIEW" | jq -r '.name')
+if [ -z "$BASE_NAME" ] || [ "$BASE_NAME" = "null" ]; then
+    echo "Error: Could not determine repo name from repo info for $BASE_URL" >&2
+    exit 1
+fi
 
 BASE_REPO="$BASE_OWNER/$BASE_NAME"
 
