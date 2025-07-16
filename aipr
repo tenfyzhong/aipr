@@ -272,7 +272,7 @@ EOF
 create_pr() {
     DIFF="$1"
     shift
-    echo -e "${YELLOW}Creating PR ${BLUE}${GH_USER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
+    echo -e "${YELLOW}Creating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     TEMP_FILE=$(mktemp)
     generate_title "$DIFF" "$TEMP_FILE"
@@ -295,7 +295,7 @@ EOF
 
     read -p "Create PR with these details? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
-        gh pr create -R "$BASE_REPO" -H "${GH_USER}:${HEAD_BRANCH}" -B "${BASE_BRANCH}" -t "$TITLE" -F "$TEMP_FILE" "$@"
+        gh pr create -R "$BASE_REPO" -H "${HEAD_OWNER}:${HEAD_BRANCH}" -B "${BASE_BRANCH}" -t "$TITLE" -F "$TEMP_FILE" "$@"
     else
         echo "PR creation cancelled"
     fi
@@ -305,7 +305,7 @@ EOF
 update_pr() {
     DIFF=$1
     shift
-    echo -e "${YELLOW}Updating PR ${BLUE}${GH_USER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
+    echo -e "${YELLOW}Updating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     SYSTEM=$(cat "$PROMPT_BODY")
 
@@ -446,10 +446,15 @@ git fetch "$BASE_REMOTE"
 kill_spin
 
 HEAD_REMOTE=$(get_branch_remote "$HEAD_BRANCH")
-GH_USER=$(gh config get -h github.com user)
+HEAD_URL=$(remote_2_url "$HEAD_REMOTE")
+if ! HEAD_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$HEAD_URL"); then
+    echo "Error: Failed to get repo info for head remote URL: $HEAD_URL" >&2
+    exit 1
+fi
 
-if [ -z "$GH_USER" ]; then
-    echo "gh is unauthenticated" >&2
+HEAD_OWNER=$(echo "$HEAD_VIEW" | jq -r '.owner.login')
+if [ -z "$HEAD_OWNER" ] || [ "$HEAD_OWNER" = "null" ]; then
+    echo "Error: Could not determine owner from repo info for $HEAD_URL" >&2
     exit 1
 fi
 
@@ -457,11 +462,27 @@ if ! check_unpush "$HEAD_BRANCH" "$HEAD_REMOTE"; then
     prompt_push "$HEAD_BRANCH" "$HEAD_REMOTE"
 fi
 
-BASE_URL=$(remote_2_url "$BASE_REMOTE")
-BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL")
+if [ "$HEAD_REMOTE" = "$BASE_REMOTE" ]; then
+    BASE_VIEW="$HEAD_VIEW"
+    BASE_URL="$HEAD_URL"
+else
+    BASE_URL=$(remote_2_url "$BASE_REMOTE")
+    if ! BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL"); then
+        echo "Error: Failed to get repo info for base remote URL: $BASE_URL" >&2
+        exit 1
+    fi
+fi
 
 BASE_OWNER=$(echo "$BASE_VIEW" | jq -r '.owner.login')
+if [ -z "$BASE_OWNER" ] || [ "$BASE_OWNER" = "null" ]; then
+    echo "Error: Could not determine owner from repo info for $BASE_URL" >&2
+    exit 1
+fi
 BASE_NAME=$(echo "$BASE_VIEW" | jq -r '.name')
+if [ -z "$BASE_NAME" ] || [ "$BASE_NAME" = "null" ]; then
+    echo "Error: Could not determine repo name from repo info for $BASE_URL" >&2
+    exit 1
+fi
 
 BASE_REPO="$BASE_OWNER/$BASE_NAME"
 
@@ -470,7 +491,7 @@ if [ -z "$BASE_BRANCH" ]; then
 fi
 
 # Get the changes between $HEAD_REMOTE/$HEAD_BRANCH and $BASE_REMOTE/$BASE_BRANCH
-DIFF=$(git diff "remotes/$BASE_REMOTE/$BASE_BRANCH"..."remotes/$HEAD_REMOTE/$HEAD_BRANCH")
+DIFF=$(git diff "remotes/$BASE_REMOTE/$BASE_BRANCH...remotes/$HEAD_REMOTE/$HEAD_BRANCH")
 
 if [ -z "$DIFF" ]; then
     exit 0
