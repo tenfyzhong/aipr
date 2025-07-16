@@ -463,7 +463,8 @@ if ! check_unpush "$HEAD_BRANCH" "$HEAD_REMOTE"; then
 fi
 
 if [ "$HEAD_REMOTE" = "$BASE_REMOTE" ]; then
-    BASE_VIEW=$HEAD_VIEW
+    BASE_VIEW="$HEAD_VIEW"
+    BASE_URL="$HEAD_URL"
 else
     BASE_URL=$(remote_2_url "$BASE_REMOTE")
     if ! BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL"); then
