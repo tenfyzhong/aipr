@@ -447,8 +447,16 @@ kill_spin
 
 HEAD_REMOTE=$(get_branch_remote "$HEAD_BRANCH")
 HEAD_URL=$(remote_2_url "$HEAD_REMOTE")
-HEAD_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$HEAD_URL")
+if ! HEAD_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$HEAD_URL"); then
+    echo "Error: Failed to get repo info for head remote URL: $HEAD_URL" >&2
+    exit 1
+fi
+
 HEAD_OWNER=$(echo "$HEAD_VIEW" | jq -r '.owner.login')
+if [ -z "$HEAD_OWNER" ] || [ "$HEAD_OWNER" = "null" ]; then
+    echo "Error: Could not determine owner from repo info for $HEAD_URL" >&2
+    exit 1
+fi
 
 if [ -z "$HEAD_OWNER" ]; then
     echo "The owner of $HEAD_URL is not found" >&2
@@ -463,7 +471,10 @@ if [ "$HEAD_REMOTE" = "$BASE_REMOTE" ]; then
     BASE_VIEW=$HEAD_VIEW
 else
     BASE_URL=$(remote_2_url "$BASE_REMOTE")
-    BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL")
+    if ! BASE_VIEW=$(gh repo view --json defaultBranchRef,name,owner "$BASE_URL"); then
+        echo "Error: Failed to get repo info for base remote URL: $BASE_URL" >&2
+        exit 1
+    fi
 fi
 
 BASE_OWNER=$(echo "$BASE_VIEW" | jq -r '.owner.login')
