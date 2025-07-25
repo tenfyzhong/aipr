@@ -245,6 +245,7 @@ generate_body() {
     DIFF="$1"
     TEMP_FILE="$2"
     EXTRA_SYSTEM="$3"
+    TEMPLATE_CONTENT="$4"
 
     SYSTEM=$(cat "$PROMPT_BODY")
     if [ -n "$EXTRA_SYSTEM" ]; then
@@ -264,8 +265,11 @@ EOF
     BODY=$(echo "$DIFF" | llm -s "$PROMPT")
     kill_spin
 
-    # TEMP_FILE=$(mktemp).md
-    echo "$BODY" >"$TEMP_FILE"
+    if [ -n "$BODY" ]; then
+        echo "$BODY" >"$TEMP_FILE"
+    else
+        echo "$TEMPLATE_CONTENT" >"$TEMP_FILE"
+    fi
     ${EDITOR:-vi} "$TEMP_FILE"
 }
 
@@ -291,7 +295,7 @@ EOF
     fi
 
     TEMP_FILE=$(mktemp).md
-    generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
+    generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM" "$TEMPLATE_CONTENT"
 
     read -p "Create PR with these details? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
