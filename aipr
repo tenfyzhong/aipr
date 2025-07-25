@@ -282,7 +282,7 @@ create_pr() {
 
     TEMP_FILE=$(mktemp).md
     EXTRA_SYSTEM=
-    if [ -n "$TEMPLATE" ]; then
+    if [ -f "$TEMPLATE" ]; then
         TEMPLATE_CONTENT=$(cat "$TEMPLATE")
         cat "$TEMPLATE" >"$TEMP_FILE"
         EXTRA_SYSTEM=$(
@@ -331,7 +331,7 @@ EOF
     )
 
     TEMP_FILE=$(mktemp).md
-    echo "$OLD_BODY" >"$TEMP_FILE"
+    printf '%s' "$OLD_BODY" >"$TEMP_FILE"
     generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
 
     read -p "Update PR #$ONGOING with these changes? [y/N] " confirm
