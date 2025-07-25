@@ -51,7 +51,8 @@ cleanup() {
 # A helper to create a temp file and exit on failure
 _create_temp_file() {
     local temp_file
-    temp_file=$(mktemp -q --suffix=.md)
+    # Try for GNU mktemp with suffix support, but fall back to a portable version for systems like macOS.
+    temp_file=$(mktemp -q --suffix=.md 2>/dev/null) || temp_file=$(mktemp -q -t aipr)
     if [[ -z "$temp_file" || ! -f "$temp_file" ]]; then
         echo "Error: Failed to create temporary file." >&2
         exit 1
