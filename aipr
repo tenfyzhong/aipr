@@ -284,7 +284,7 @@ create_pr() {
     EXTRA_SYSTEM=
     if [ -f "$TEMPLATE" ]; then
         TEMPLATE_CONTENT=$(cat "$TEMPLATE")
-        cat "$TEMPLATE" >"$TEMP_FILE"
+        printf '%s' "$TEMPLATE_CONTENT" >"$TEMP_FILE"
         EXTRA_SYSTEM=$(
             cat <<EOF
 You should fill in the content based on the following template:
