@@ -48,6 +48,17 @@ cleanup() {
     exit 1
 }
 
+# A helper to create a temp file and exit on failure
+_create_temp_file() {
+    local temp_file
+    temp_file=$(mktemp -q --suffix=.md)
+    if [[ -z "$temp_file" || ! -f "$temp_file" ]]; then
+        echo "Error: Failed to create temporary file." >&2
+        exit 1
+    fi
+    echo "$temp_file"
+}
+
 # Function to get the current head branch
 get_current_branch() {
     git rev-parse --abbrev-ref HEAD
@@ -275,20 +286,12 @@ create_pr() {
     shift
     echo -e "${YELLOW}Creating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
-    TEMP_FILE=$(mktemp)
-    if [ ! -f "$TEMP_FILE" ]; then
-        echo "Error: Failed to create temporary file." >&2
-        exit 1
-    fi
+    TEMP_FILE=$(_create_temp_file)
     generate_title "$DIFF" "$TEMP_FILE"
     TITLE=$(cat "$TEMP_FILE")
     rm -f "$TEMP_FILE"
 
-    TEMP_FILE=$(mktemp -q --suffix=.md)
-    if [ ! -f "$TEMP_FILE" ]; then
-        echo "Error: Failed to create temporary file." >&2
-        exit 1
-    fi
+    TEMP_FILE=$(_create_temp_file)
     EXTRA_SYSTEM=
     if [ -f "$TEMPLATE" ]; then
         TEMPLATE_CONTENT=$(cat "$TEMPLATE")
@@ -321,11 +324,7 @@ update_pr() {
 
     extra_options=()
     if [ "$UPDATE_TITLE" = 1 ]; then
-        TEMP_FILE=$(mktemp)
-        if [ ! -f "$TEMP_FILE" ]; then
-            echo "Error: Failed to create temporary file." >&2
-            exit 1
-        fi
+        TEMP_FILE=$(_create_temp_file)
         generate_title "$DIFF" "$TEMP_FILE"
         TITLE=$(cat "$TEMP_FILE")
         rm -f "$TEMP_FILE"
@@ -342,11 +341,7 @@ $OLD_BODY
 EOF
     )
 
-    TEMP_FILE=$(mktemp -q --suffix=.md)
-    if [ ! -f "$TEMP_FILE" ]; then
-        echo "Error: Failed to create temporary file." >&2
-        exit 1
-    fi
+    TEMP_FILE=$(_create_temp_file)
     printf '%s' "$OLD_BODY" >"$TEMP_FILE"
     generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
 
