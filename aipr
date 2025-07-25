@@ -276,11 +276,15 @@ create_pr() {
     echo -e "${YELLOW}Creating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
     TEMP_FILE=$(mktemp)
+    if [ ! -f "$TEMP_FILE" ]; then
+        echo "Error: Failed to create temporary file." >&2
+        exit 1
+    fi
     generate_title "$DIFF" "$TEMP_FILE"
     TITLE=$(cat "$TEMP_FILE")
     rm -f "$TEMP_FILE"
 
-    TEMP_FILE=$(mktemp).md
+    TEMP_FILE=$(mktemp -q --suffix=.md)
     if [ ! -f "$TEMP_FILE" ]; then
         echo "Error: Failed to create temporary file." >&2
         exit 1
@@ -318,6 +322,10 @@ update_pr() {
     extra_options=()
     if [ "$UPDATE_TITLE" = 1 ]; then
         TEMP_FILE=$(mktemp)
+        if [ ! -f "$TEMP_FILE" ]; then
+            echo "Error: Failed to create temporary file." >&2
+            exit 1
+        fi
         generate_title "$DIFF" "$TEMP_FILE"
         TITLE=$(cat "$TEMP_FILE")
         rm -f "$TEMP_FILE"
@@ -334,7 +342,7 @@ $OLD_BODY
 EOF
     )
 
-    TEMP_FILE=$(mktemp).md
+    TEMP_FILE=$(mktemp -q --suffix=.md)
     if [ ! -f "$TEMP_FILE" ]; then
         echo "Error: Failed to create temporary file." >&2
         exit 1
