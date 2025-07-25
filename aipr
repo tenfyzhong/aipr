@@ -281,6 +281,10 @@ create_pr() {
     rm -f "$TEMP_FILE"
 
     TEMP_FILE=$(mktemp).md
+    if [ ! -f "$TEMP_FILE" ]; then
+        echo "Error: Failed to create temporary file." >&2
+        exit 1
+    fi
     EXTRA_SYSTEM=
     if [ -f "$TEMPLATE" ]; then
         TEMPLATE_CONTENT=$(cat "$TEMPLATE")
@@ -331,6 +335,10 @@ EOF
     )
 
     TEMP_FILE=$(mktemp).md
+    if [ ! -f "$TEMP_FILE" ]; then
+        echo "Error: Failed to create temporary file." >&2
+        exit 1
+    fi
     printf '%s' "$OLD_BODY" >"$TEMP_FILE"
     generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
 
