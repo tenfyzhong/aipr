@@ -48,6 +48,18 @@ cleanup() {
     exit 1
 }
 
+# A helper to create a temp file and exit on failure
+_create_temp_file() {
+    local temp_file
+    # Try for GNU mktemp with suffix support, but fall back to a portable version for systems like macOS.
+    temp_file=$(mktemp -q --suffix=.md 2>/dev/null || mktemp -q -t aipr)
+    if [[ -z "$temp_file" || ! -f "$temp_file" ]]; then
+        echo "Error: Failed to create temporary file." >&2
+        exit 1
+    fi
+    echo "$temp_file"
+}
+
 # Function to get the current head branch
 get_current_branch() {
     git rev-parse --abbrev-ref HEAD
@@ -245,7 +257,6 @@ generate_body() {
     DIFF="$1"
     TEMP_FILE="$2"
     EXTRA_SYSTEM="$3"
-    TEMPLATE_CONTENT="$4"
 
     SYSTEM=$(cat "$PROMPT_BODY")
     if [ -n "$EXTRA_SYSTEM" ]; then
@@ -267,8 +278,6 @@ EOF
 
     if [ -n "$BODY" ]; then
         echo "$BODY" >"$TEMP_FILE"
-    else
-        echo "$TEMPLATE_CONTENT" >"$TEMP_FILE"
     fi
     ${EDITOR:-vi} "$TEMP_FILE"
 }
@@ -278,14 +287,16 @@ create_pr() {
     shift
     echo -e "${YELLOW}Creating PR ${BLUE}${HEAD_OWNER}:${HEAD_BRANCH}${YELLOW} -> ${BLUE}${BASE_OWNER}:${BASE_BRANCH}${YELLOW}${NC}..."
 
-    TEMP_FILE=$(mktemp)
+    TEMP_FILE=$(_create_temp_file)
     generate_title "$DIFF" "$TEMP_FILE"
     TITLE=$(cat "$TEMP_FILE")
     rm -f "$TEMP_FILE"
 
+    TEMP_FILE=$(_create_temp_file)
     EXTRA_SYSTEM=
-    if [ -n "$TEMPLATE" ]; then
+    if [ -f "$TEMPLATE" ]; then
         TEMPLATE_CONTENT=$(cat "$TEMPLATE")
+        printf '%s' "$TEMPLATE_CONTENT" >"$TEMP_FILE"
         EXTRA_SYSTEM=$(
             cat <<EOF
 You should fill in the content based on the following template:
@@ -294,8 +305,7 @@ EOF
         )
     fi
 
-    TEMP_FILE=$(mktemp).md
-    generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM" "$TEMPLATE_CONTENT"
+    generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
 
     read -p "Create PR with these details? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
@@ -315,7 +325,7 @@ update_pr() {
 
     extra_options=()
     if [ "$UPDATE_TITLE" = 1 ]; then
-        TEMP_FILE=$(mktemp)
+        TEMP_FILE=$(_create_temp_file)
         generate_title "$DIFF" "$TEMP_FILE"
         TITLE=$(cat "$TEMP_FILE")
         rm -f "$TEMP_FILE"
@@ -332,7 +342,8 @@ $OLD_BODY
 EOF
     )
 
-    TEMP_FILE=$(mktemp).md
+    TEMP_FILE=$(_create_temp_file)
+    printf '%s' "$OLD_BODY" >"$TEMP_FILE"
     generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
 
     read -p "Update PR #$ONGOING with these changes? [y/N] " confirm
