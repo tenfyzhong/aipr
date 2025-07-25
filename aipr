@@ -333,7 +333,7 @@ EOF
     )
 
     TEMP_FILE=$(mktemp).md
-    generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM"
+    generate_body "$DIFF" "$TEMP_FILE" "$EXTRA_SYSTEM" "$OLD_BODY"
 
     read -p "Update PR #$ONGOING with these changes? [y/N] " confirm
     if [[ $confirm =~ ^[Yy]$ ]]; then
